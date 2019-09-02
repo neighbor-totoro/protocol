@@ -35,14 +35,6 @@ type MessageError struct {
 	M string
 }
 
-type MessageSlice struct {
-	M string
-}
-
-type MessageInteger struct {
-	M int64
-}
-
 type MessageArray struct {
 	M []string
 }

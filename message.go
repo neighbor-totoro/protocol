@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/gob"
 	"errors"
 
@@ -10,12 +9,8 @@ import (
 )
 
 func init() {
-	gob.Register([][]byte{})
-
 	gob.Register(MessageError{})
-	gob.Register(MessageSlice{})
 	gob.Register(MessageArray{})
-	gob.Register(MessageInteger{})
 }
 
 func NewMessageWriter(w *bufio.Writer) *messageWriter {
@@ -26,10 +21,6 @@ func NewMessage(name string, x interface{}) *Message {
 	switch v := x.(type) {
 	case error:
 		return &Message{name, MessageError{v.Error()}}
-	case int64:
-		return &Message{name, MessageInteger{v}}
-	case string:
-		return &Message{name, MessageSlice{v}}
 	case []string:
 		return &Message{name, MessageArray{v}}
 	default:
@@ -43,16 +34,12 @@ func (m *messageWriter) Write(name string, x interface{}) error {
 	switch v := x.(type) {
 	case error:
 		msg = &Message{name, MessageError{v.Error()}}
-	case int64:
-		msg = &Message{name, MessageInteger{v}}
-	case string:
-		msg = &Message{name, MessageSlice{v}}
 	case []string:
 		msg = &Message{name, MessageArray{v}}
 	default:
 		return TYPEERROR
 	}
-	data, err := Encode(msg)
+	data, err := miscellaneous.Encode(msg)
 	if err != nil {
 		return ENCODEERROR
 	}
@@ -70,7 +57,7 @@ func (m *messageWriter) Write(name string, x interface{}) error {
 }
 
 func (m *messageWriter) WriteMessage(msg *Message) error {
-	data, err := Encode(msg)
+	data, err := miscellaneous.Encode(msg)
 	if err != nil {
 		return ENCODEERROR
 	}
@@ -103,41 +90,8 @@ func ReadMessage(r *bufio.Reader) (*Message, error) {
 	if n, _ := r.Read(buf); uint64(n) != length {
 		return nil, errors.New("Illegal Length")
 	}
-	if err := Decode(buf, &msg); err != nil {
+	if err := miscellaneous.Decode(buf, &msg); err != nil {
 		return nil, err
 	}
 	return &msg, nil
-}
-
-func Encode(v interface{}) ([]byte, error) {
-	var buf bytes.Buffer
-
-	if err := gob.NewEncoder(&buf).Encode(v); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func Decode(data []byte, v interface{}) error {
-	return gob.NewDecoder(bytes.NewReader(data)).Decode(v)
-}
-
-// delroom name
-func DelRoom(name string) []string {
-	return []string{"delRoom", name}
-}
-
-// addroom name address
-func AddRoom(name, address string) []string {
-	return []string{"addRoom", name, address}
-}
-
-// rent name user
-func Rent(name, user string) []string {
-	return []string{"rent", name, user}
-}
-
-// rec name user
-func Rec(name, user string) []string {
-	return []string{"rec", name, user}
 }
